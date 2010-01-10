@@ -17,6 +17,7 @@
 #include "v2fuseutils.h"
 #include "volume_container.h"
 #include "image_file.h"
+#include "mbr.h"
 
 #define fusefat_getvolume(V)     struct fuse_context *mycontext = fuse_get_context(); V = (Volume_t *) mycontext->private_data;
 	
@@ -361,8 +362,12 @@ int main(int argc, char *argv[])
 
 	int res;
 	int using_hdf;
+	int partition_number;
+	partition_info partinfo;
+	int using_fat_partition;
 
 	volume_container vol_container;
+	volume_container partition;
 
 	if (argc < 3) { 
 		v2f_usage(argv[0],&fusefat_oper);
@@ -389,7 +394,27 @@ int main(int argc, char *argv[])
 	if (res) return -1;
 	res = fat_partition_init(V, &vol_container,
 					(rorwplus==FLRWPLUS)?FAT_WRITE_ACCESS_FLAG:0);
-	if (res < 0) return -1;		
+	if (res < 0) {
+		using_fat_partition = 0;
+		fprintf(stderr, "Opening image as FAT failed - checking for MBR\n");
+		if (volume_is_bootable(&vol_container)) {
+			for (partition_number = 0; partition_number < 4; partition_number++) {
+				res = mbr_partition_info(&vol_container, partition_number, &partinfo);
+				if (res == 0) {
+					if (partition_info_is_fat(&partinfo)) {
+						fprintf(stderr, "Found FAT volume at partition %d\n", partition_number);
+						if (partition_open(&partinfo, &partition) == 0
+							&& fat_partition_init(V, &partition, (rorwplus==FLRWPLUS)?FAT_WRITE_ACCESS_FLAG:0) == 0) {
+							using_fat_partition = 1;
+						} else {
+							fprintf(stderr, "Error opening FAT partition\n");
+						}
+					}
+				}
+			}
+		}
+		if (!using_fat_partition) return -1;
+	}
 
 	//   umask(0);
 #if ( FUSE_MINOR_VERSION <= 5 )
@@ -400,6 +425,9 @@ int main(int argc, char *argv[])
 #endif
 
 	res = fat_partition_finalize(V);
+	if (using_fat_partition) {
+		partition_close(&partition);
+	}
 	if (using_hdf) {
 		hdf_image_close(&vol_container);
 	} else {

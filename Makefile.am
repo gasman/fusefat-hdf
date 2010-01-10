@@ -17,7 +17,8 @@ COMMONSRC = fusefat.c \
 	unicode.h utf16be.c utf16le.c utf8.c \
 	simple_fold.c \
 	v2fuseutils.c v2fuseutils.h \
-	image_file.c image_file.h volume_container.h
+	image_file.c image_file.h volume_container.h \
+	mbr.c mbr.h
 
 fusefat_SOURCES = $(COMMONSRC)
 fusefat_LDFLAGS = -lfuse -lpthread $(GLIB2_LIBS) $(FUSE_LIBS)

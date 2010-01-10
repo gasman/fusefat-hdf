@@ -70,6 +70,7 @@ int raw_image_open(volume_container *v, char *pathname, int flags) {
 
 	v->data.file.fd = fd;
 	v->data.file.data_offset = 0;
+	v->bytes_per_sector = 512;
 	v->read = &image_file_read;
 	v->write = &image_file_write;
 	return 0;
@@ -85,6 +86,7 @@ static char *hdf_signature = "RS-IDE\x1a";
 
 int hdf_image_open(volume_container *v, char *pathname, int flags) {
 	int fd;
+	unsigned char hdf_header[11];
 
 	if (flags & IMAGE_FILE_WRITE_ACCESS_FLAG) {
 		if ( (fd = open(pathname, O_RDWR)) == -1 ) {
@@ -98,8 +100,19 @@ int hdf_image_open(volume_container *v, char *pathname, int flags) {
 		}
 	}
 
+	if (read(fd, hdf_header, 11) != 11) {
+		close(fd);
+		perror("Error reading HDF header");
+		return -1;
+	}
+
 	v->data.file.fd = fd;
-	v->data.file.data_offset = 0x80;
+	v->data.file.data_offset = hdf_header[0x09] | (hdf_header[0x0a] << 8);
+	if (hdf_header[0x08] & 0x01) {
+		v->bytes_per_sector = 256;
+	} else {
+		v->bytes_per_sector = 512;
+	}
 	v->read = &image_file_read;
 	v->write = &image_file_write;
 	return 0;
