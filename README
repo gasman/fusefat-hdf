@@ -1,3 +1,29 @@
+fusefat-hdf
+
+This is a FUSE (Filesystem in USErspace - http://fuse.sourceforge.net/)
+application to allow FAT filesystem images (including HDF hard disk images as
+used by ZX Spectrum emulators such as Fuse and RealSpectrum) to be mounted and
+accessed via native file commands.
+
+Usage:
+
+(for read-only access)
+    fusefat -o rw+ [image-file] [mount-point]
+(for read-write access - experimental)
+    fusefat -o rw+ [image-file] [mount-point]
+
+Limitations:
+* Read/write support is experimental
+* On partitioned devices, it will only mount the first primary FAT partition
+  it finds
+* Currently Linux-specific
+
+Development site: http://github.com/gasman/fusefat-hdf
+
+    - Matt Westcott <matt@west.co.tt> 2010-01-10
+
+[original README from fusefat follows]
+
 Software released under GNU GPL license.
 
 To generate the makefile use "./configure" 
